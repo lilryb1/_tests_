@@ -1,0 +1,51 @@
+name: UI Tests
+
+on:
+  workflow_dispatch:
+  push:
+  pull_request:
+
+jobs:
+  test-non-pom-and-pom:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-playwright playwright pytest-html
+
+      - name: Install Playwright browsers
+        run: python -m playwright install --with-deps chromium
+
+      - name: Run tests without POM
+        run: |
+          mkdir -p ui_tests/artifacts/non_pom
+          pytest ui_tests/tests -q -k "not pom" --browser chromium --html=ui_tests/artifacts/non_pom/report.html --self-contained-html --junitxml=ui_tests/artifacts/non_pom/junit.xml --tracing retain-on-failure --video retain-on-failure --screenshot only-on-failure
+
+      - name: Run tests with POM
+        run: |
+          mkdir -p ui_tests/artifacts/pom
+          pytest ui_tests/tests -q -k "pom" --browser chromium --html=ui_tests/artifacts/pom/report.html --self-contained-html --junitxml=ui_tests/artifacts/pom/junit.xml --tracing retain-on-failure --video retain-on-failure --screenshot only-on-failure
+
+      - name: Upload non-POM report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: report-non-pom
+          path: ui_tests/artifacts/non_pom
+
+      - name: Upload POM report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: report-pom
+          path: ui_tests/artifacts/pom
